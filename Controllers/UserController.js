@@ -1,10 +1,18 @@
 import UserModel from "../Models/userModel.js";
+import PostModel from "../Models/postModel.js";
+import commentModel from "../Models/commentModel.js";
 import bcrypt from "bcrypt";
 import { uploadImageToFirebase } from "../SharedFunctions.js";
 import { deleteImageFromFirebase } from "../SharedFunctions.js";
 
 // get a User
 export const getUser = async (req, res) => {
+
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const id = req.params.id;
 
   try {
@@ -24,6 +32,12 @@ export const getUser = async (req, res) => {
 
 // Update a user
 export const updateUser = async (req, res) => {
+
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const userId = req.params.id;
   const { username, password, firstname, lastname } = req.body;
 
@@ -61,7 +75,7 @@ export const updateUser = async (req, res) => {
     if (req.files && req.files.profilePicture) {
       const profileImage = req.files.profilePicture[0]; // Get the first file uploaded
       // Upload profile image to Firebase Storage and update user's profile image field
-      const profileImageUrl = await uploadImageToFirebase('users' ,userId , 'profile' , profileImage,);
+      const profileImageUrl = await uploadImageToFirebase('users', userId, 'profile', profileImage,);
       user.profilePicture = profileImageUrl;
     }
 
@@ -69,7 +83,7 @@ export const updateUser = async (req, res) => {
     if (req.files && req.files.coverPicture) {
       const coverImage = req.files.coverPicture[0]; // Get the first file uploaded
       // Upload cover image to Firebase Storage and update user's cover image field
-      const coverImageUrl = await uploadImageToFirebase('users',userId , 'cover' , coverImage);
+      const coverImageUrl = await uploadImageToFirebase('users', userId, 'cover', coverImage);
       user.coverPicture = coverImageUrl;
     }
 
@@ -80,8 +94,21 @@ export const updateUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-// Delete a user
+
 export const deleteUser = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
+  if(req.body.currentUserAdminStatus == undefined ) {
+    return res.status(500).send("admin status required");
+  }
+
+  if(req.body.currentUserAdminStatus && process.env.Admin_Key != req.headers.secretkeyAdmin ) {
+    return res.status(500).send("unuthorized action for not admin user");
+  }
+
   const userId = req.params.id;
 
   try {
@@ -90,16 +117,33 @@ export const deleteUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Delete the  pictures from Firebase if it exists
+    // Find all posts by the user
+    const userPosts = await PostModel.find({ userId });
+
+    // Delete images associated with the user's posts
+    for (const post of userPosts) {
+      if (post.image) {
+        await deleteImageFromFirebase(post.image);
+      }
+    }
+
+    // Delete the user's posts
+    await PostModel.deleteMany({ userId });
+
+    // Delete the user's comments
+    await commentModel.deleteMany({ userId });
+
+    // Delete the user's pictures from Firebase if they exist
     if (user.profilePicture) {
       await deleteImageFromFirebase(user.profilePicture);
     }
-    if(user.coverPicture) {
+    if (user.coverPicture) {
       await deleteImageFromFirebase(user.coverPicture);
     }
 
     // Delete the user from the database
     await UserModel.findByIdAndDelete(userId);
+
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -108,6 +152,11 @@ export const deleteUser = async (req, res) => {
 
 // Follow a User
 export const followUser = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const id = req.params.id;
 
   const { currentUserId } = req.body;
@@ -134,6 +183,11 @@ export const followUser = async (req, res) => {
 
 // UnFollow a User
 export const UnFollowUser = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+  
   const id = req.params.id;
 
   const { currentUserId } = req.body;

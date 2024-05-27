@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import AuthRoute from './Routes/AuthRoute.js';
 import UserRoute from './Routes/UserRoute.js';
 import PostRoute from './Routes/PostRoute.js';
+import CommentRoute from './Routes/CommentRoute.js'
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ mongoose
 app.use('/auth', AuthRoute);
 app.use('/user', UserRoute);
 app.use('/post', PostRoute);
+app.use('/comments' , CommentRoute);
 
 export default app;
  

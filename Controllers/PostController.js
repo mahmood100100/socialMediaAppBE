@@ -1,10 +1,16 @@
 import PostModel from "../Models/postModel.js";
+import CommentModel from "../Models/commentModel.js";
 import mongoose from "mongoose";
 import UserModel from "../Models/userModel.js";
 import { uploadImageToFirebase } from "../SharedFunctions.js";
 import { deleteImageFromFirebase } from "../SharedFunctions.js";
 // Create new Post
 export const createPost = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const { title, content, userId } = req.body;
 
   try {
@@ -41,6 +47,11 @@ export const createPost = async (req, res) => {
 
 // Get a post
 export const getPost = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const id = req.params.id;
 
   try {
@@ -53,6 +64,11 @@ export const getPost = async (req, res) => {
 
 // Update a post
 export const updatePost = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const postId = req.params.id;
   const { userId } = req.body;
 
@@ -91,14 +107,21 @@ export const updatePost = async (req, res) => {
   }
 };
 
-// Delete a post
 export const deletePost = async (req, res) => {
-  const id = req.params.id;
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
+  const postId = req.params.id;
   const { userId } = req.body;
 
   try {
-    const post = await PostModel.findById(id);
+    const post = await PostModel.findById(postId);
     if (post.userId === userId) {
+      // Find and delete all comments associated with the post
+      await CommentModel.deleteMany({ postId });
+
       // Delete the post image from Firebase if it exists
       if (post.image) {
         try {
@@ -120,6 +143,11 @@ export const deletePost = async (req, res) => {
 
 // like/dislike a post
 export const likePost = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const id = req.params.id;
   const { userId } = req.body;
 
@@ -139,6 +167,11 @@ export const likePost = async (req, res) => {
 
 // Get Timeline Posts
 export const getTimelinePosts = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const userId = req.params.id;
 
   try {
@@ -168,7 +201,7 @@ export const getTimelinePosts = async (req, res) => {
     res
       .status(200)
       .json(currentUserPosts.concat(...followingPosts[0].followingPosts)
-      .sort((a, b) => b.createdAt - a.createdAt));
+        .sort((a, b) => b.createdAt - a.createdAt));
   } catch (error) {
     res.status(500).json(error);
   }

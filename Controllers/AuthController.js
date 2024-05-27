@@ -5,6 +5,11 @@ import { uploadImageToFirebase } from "../SharedFunctions.js";
 
 // Registering a new User
 export const registerUser = async (req, res) => {
+  const SECRET_KEY = process.env.SECRET_KEY;
+  if (req.headers.secretkey !== SECRET_KEY) {
+    return res.status(500).send("unuthorized action");
+  }
+
   const { username, password, firstname, lastname } = req.body;
 
   try {
@@ -66,7 +71,7 @@ export const loginUser = async (req, res) => {
     // Generate a JWT token
     const token = jwt.sign({ userId: user._id, username: user.username }, process.env.JWT_SECRET);
 
-    res.status(200).json({ message: "Login successful", token , userId: user._id });
+    res.status(200).json({ message: "Login successful", token, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
